@@ -1,0 +1,112 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © viktors.s@gmail.com
+
+//@version=4
+strategy("CombinedBinHAndClucV6", overlay=true, currency=currency.EUR, default_qty_type=strategy.cash, default_qty_value=150, initial_capital = 33000, calc_on_every_tick=true,commission_type=strategy.commission.percent, commission_value =0.15)
+
+
+startDate  = input(title="Start Strat", type=input.time, defval=timestamp("01 Jan 2021 00:00 +0000") )
+// startYear  = input(title="Start Year", type=input.integer, defval=2021, step =1, minval = 2000 )
+// startMonth = input(title="Month", type=input.integer, defval=1, step =1, minval = 1, maxval = 12 )
+// startDay   = input(title="Day", type=input.integer, defval=1, step =1, minval = 1, maxval = 31 )
+
+enableROI = input(title="Enable RIO", type=input.bool, defval=true)
+ROIValue  = input(title="RIO value %", type=input.float, defval= 1.8, step =0.01, minval = 0.1, maxval = 100 )
+enableROIRSILimit  = input(title="Enable RIO RSI limit", type=input.bool, defval= true)
+ROIRSILimit   = input(title="RIO RSI limit", type=input.integer, defval=50, step =1, minval = 1, maxval = 100 )
+
+enableTimeout = input(title="Enable Timeout", type=input.bool, defval=true)
+timeoutMinuts  = input(title="Timeout minuts", type=input.integer, defval=300, step =1, minval = 100000 )
+
+
+
+BinHV45_BB_length = input(title="BinHV45 Bollinger Bands length", type=input.integer, defval=40, step =1, minval = 5, maxval = 100 )
+
+BinHV45_close_bbdelta  = input(title="BinHV45 close bbdelta", type=input.float, defval= 0.031, step =0.001, minval = 0.1, maxval = 100 )
+BinHV45_closedelta  = input(title="BinHV45 closedelta", type=input.float, defval= 0.018, step =0.001, minval = 0.1, maxval = 100 )
+BinHV45_tail_bbdelta  = input(title="BinHV45 tail bbdelta", type=input.float, defval= 0.223, step =0.001, minval = 0.1, maxval = 100 )
+
+ClucMay72018_BB_length = input(title="ClucMay72018 Bollinger Bands length", type=input.integer, defval=20, step =1, minval = 5, maxval = 100 )
+ClucMay72018_close  = input(title="ClucMay72018 close", type=input.float, defval= 0.993, step =0.001, minval = 0.1, maxval = 100 )
+ClucMay72018_volume_coef = input(title="ClucMay72018 Volume coef", type=input.integer, defval=21, step =1, minval = 1, maxval = 300 )
+
+//strategy BinHV45
+[middle, upper, lower] = bb(close, BinHV45_BB_length, 2)
+bbdelta = abs(middle - lower)
+closedelta = abs(close -close[1])
+tail = abs(close - low)
+
+
+//strategy ClucMay72018
+[middle2, upper2, lower2] = bb(close, ClucMay72018_BB_length, 2)
+p_middle = plot(middle2, color=color.aqua)
+p_upper = plot(upper2, color=color.silver)
+p_lower = plot(lower2, color=color.silver)
+fill(p_lower,p_upper)
+
+ema_slow = ema(close,50)
+volume_mean_slow = sum(volume,30)/30
+plot(ema_slow, color=color.red)
+
+ema_50  =  ema(close,50)
+ema_200 =  ema(close,200)
+sma_5   =  ema(close,5)
+rsi_5m     =  rsi(close,14)
+atr_5m  = atr(14)
+sma_high = sma(high,20)
+sma_low= sma(low,20)
+
+
+plotchar(rsi_5m, "rsi_5m", "", location = location.top)
+
+//1h ... !
+
+
+ema_50_1h = security(syminfo.tickerid, '60', ema_50)
+ema_200_1h = security(syminfo.tickerid, '60', ema_200)
+rsi_1h = security(syminfo.tickerid, '60', rsi_5m)
+atr_1h = security(syminfo.tickerid, '60', atr_5m)
+sma_high_1h = security(syminfo.tickerid, '60', sma_high) + atr_1h
+sma_low_1h = security(syminfo.tickerid, '60', sma_low) - atr_1h
+close_1h = security(syminfo.tickerid, '60', close)
+
+float Hlv_1h = na
+Hlv_1h := close_1h > sma_high_1h ? 1 : close_1h < sma_low_1h ? -1 : Hlv_1h[1]
+sslDown_1h = Hlv_1h < 0 ? sma_high_1h: sma_low_1h
+sslUp_1h   = Hlv_1h < 0 ? sma_low_1h : sma_high_1h
+
+
+// -----------------
+
+
+
+BinHV45_Long      = close > ema_200_1h and ema_50 > ema_200 and ema_50_1h > ema_200_1h and  lower[1] > 0 and bbdelta > close * BinHV45_close_bbdelta and closedelta > close * BinHV45_closedelta and tail < bbdelta * BinHV45_tail_bbdelta and close < lower[1] and close <= close[1] 
+ClucMay72018_Long = close > ema_200 and close > ema_200_1h and  close < ema_slow and close < ClucMay72018_close * lower2 and volume < volume_mean_slow[1] * ClucMay72018_volume_coef 
+Info_Long         = close < sma_5 and sslUp_1h > sslDown_1h and ema_50 > ema_200 and ema_50_1h > ema_200_1h  and rsi_5m < rsi_1h - 43.276
+
+
+Bin_Sell = close > upper2  and close[1] > upper2[1]
+
+plotchar(BinHV45_Long, "BinHV45_Long", "", location = location.top)
+plotchar(ClucMay72018_Long, "ClucMay72018_Long", "", location = location.top)
+plotchar(Info_Long, "Info_Long", "", location = location.top)
+plotchar(Bin_Sell, "Bin_Sell", "", location = location.top)
+
+
+//afterStartDate = (time >= timestamp(syminfo.timezone, startYear, startMonth, startDay, 0, 0))
+
+afterStartDate = (time >= startDate)
+longCondition = (BinHV45_Long == 1 or ClucMay72018_Long ==1 or Info_Long ==1) and afterStartDate and strategy.position_size <= 0
+if (longCondition)
+    strategy.entry("Entry", strategy.long, when=(BinHV45_Long) , comment = 'BinHV45_Long')
+    strategy.entry("Entry", strategy.long, when=(ClucMay72018_Long) , comment = 'ClucMay72018_Long')
+    strategy.entry("Entry", strategy.long, when=(Info_Long) , comment = 'Info_Long')
+
+roi_limit = strategy.position_avg_price * (1 + ROIValue/100 )
+plot(roi_limit, color=color.green, style=plot.style_linebr, linewidth=2, title='roi_limit')
+roi_sell  = enableROI ? close > roi_limit and (enableROIRSILimit ? (rsi_5m < ROIRSILimit) : true) : na
+istimeout = enableTimeout? barssince(longCondition) >= (timeoutMinuts/5): na // 60 * 5 = 300 min
+if (strategy.position_size > 0)
+    strategy.close(id="Entry", when=(Bin_Sell) , comment = 'bin_sell')
+    strategy.close(id="Entry", when=(roi_sell) , comment = 'roi_sell_rsi='+tostring(round(rsi_5m[0])))
+    strategy.close(id="Entry", when=(istimeout), comment = 'timout_sell') 
