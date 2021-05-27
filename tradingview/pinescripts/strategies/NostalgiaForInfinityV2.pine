@@ -1,0 +1,118 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © viktors.s@gmail.com
+
+
+//@version=4
+strategy("NostalgiaForInfinityV2", overlay=true, currency=currency.EUR, default_qty_type=strategy.cash, default_qty_value=150, initial_capital = 33000, calc_on_every_tick=true,commission_type=strategy.commission.percent, commission_value =0.15)
+
+
+startDate  = input(title="Start Strat", type=input.time, defval=timestamp("01 Jan 2021 00:00 +0000") )
+
+buy_bb40_length            = input(title="Buy bb40 length", type=input.integer,          defval= 40, step =1, minval = 5, maxval = 100) 
+buy_bb40_bbdelta_close     = input(title="Buy bb40 bbdelta close", type=input.float,     defval= 0.017, step =0.001, minval = 0.005, maxval = 0.1)
+buy_bb40_closedelta_close  = input(title="Buy bb40 closedelta close", type=input.float,  defval= 0.013, step =0.001, minval = 0.01,  maxval = 0.03)
+buy_bb40_tail_bbdelta      = input(title="Buy bb40 tail bbdelta", type=input.float,      defval= 0.445, step =0.001, minval = 0.15,  maxval = 0.45)
+
+buy_bb20_length            = input(title="Buy bb20 length", type=input.integer,          defval= 20, step =1, minval = 5, maxval = 100) 
+buy_bb20_close_bblowerband = input(title="Buy bb20 close bblowerband", type=input.float, defval= 0.992, step =0.001, minval = 0.8,   maxval = 1.1)
+buy_bb20_volume            = input(title="Buy bb20 volume", type=input.integer,          defval= 27,    step =1,     minval = 18,    maxval = 34 )
+buy_rsi_diff               = input(title="Buy RSI Diff", type=input.float,               defval= 52.438,  step =0.1,   minval = 36.0,  maxval = 54.0)
+
+sell_rsi_bb                = input(title="Sell RSI bb",   type=input.float,              defval= 79.706,  step =1,   minval = 60.0,  maxval = 80.0)
+sell_rsi_main              = input(title="Sell RSI main", type=input.float  ,            defval= 85.023,  step =1,   minval = 50.0,  maxval = 90.0)
+sell_rsi_2                 = input(title="Sell RSI 2",   type=input.float,               defval= 87.545,  step =1,   minval = 50.0,  maxval = 90.0)
+sell_ema_relative          = input(title="Sell EMA relative", type=input.float,          defval= 0.03, step =0.001, minval = 0.005, maxval = 0.1)
+sell_rsi_diff              = input(title="Sell RSI diff", type=input.float,              defval= 0.873,  step =0.1, minval = 0.0, maxval = 10.0)
+
+
+
+
+//strategy bb40
+[middle, upper, lower] = bb(close, buy_bb40_length, 2)
+bbdelta = abs(middle - lower)
+closedelta = abs(close -close[1])
+tail = abs(close - low)
+
+
+//strategy bb20
+[middle2, upper2, lower2] = bb(close, buy_bb20_length, 2)
+p_middle = plot(middle2, color=color.aqua)
+p_upper = plot(upper2, color=color.silver)
+p_lower = plot(lower2, color=color.silver)
+fill(p_lower,p_upper)
+
+ema_slow = ema(close,50)
+volume_mean_slow = sum(volume,30)/30
+plot(ema_slow, color=color.red)
+
+ema_20  =  ema(close,20)
+ema_50  =  ema(close,50)
+ema_200 =  ema(close,200)
+sma_5   =  sma(close,5)
+sma_9   =  sma(close,9)
+
+rsi_5m     =  rsi(close,14)
+
+atr_5m  = atr(14)
+sma_high = sma(high,20)
+sma_low= sma(low,20)
+
+
+plotchar(rsi_5m, "rsi_5m", "", location = location.top)
+
+//1h ... !
+
+
+ema_20_1h = security(syminfo.tickerid, '60', ema_20)
+ema_50_1h = security(syminfo.tickerid, '60', ema_50)
+ema_200_1h = security(syminfo.tickerid, '60', ema_200)
+rsi_1h = security(syminfo.tickerid, '60', rsi_5m)
+atr_1h = security(syminfo.tickerid, '60', atr_5m)
+sma_high_1h = security(syminfo.tickerid, '60', sma_high) + atr_1h
+sma_low_1h = security(syminfo.tickerid, '60', sma_low) - atr_1h
+close_1h = security(syminfo.tickerid, '60', close)
+
+float Hlv_1h = na
+Hlv_1h := close_1h > sma_high_1h ? 1 : close_1h < sma_low_1h ? -1 : Hlv_1h[1]
+sslDown_1h = Hlv_1h < 0 ? sma_high_1h: sma_low_1h
+sslUp_1h   = Hlv_1h < 0 ? sma_low_1h : sma_high_1h
+
+
+//  BUY logic :)
+bb40_long = close < sma_9 and close > ema_200_1h and ema_50 > ema_200 and ema_50_1h > ema_200_1h and lower[1] > 0 and bbdelta > close * buy_bb40_bbdelta_close and  closedelta > close * buy_bb40_closedelta_close and tail < bbdelta * buy_bb40_tail_bbdelta and close < lower[1] and close <= close[1] 
+bb20_long = close < sma_9 and close > ema_200 and close > ema_200_1h and close < ema_slow and close < buy_bb20_close_bblowerband * lower2 and volume < volume_mean_slow[1] * buy_bb20_volume 
+ssl_long  = close < sma_5 and close > ema_200 and close > ema_200_1h and sslUp_1h > sslDown_1h and ema_50 > ema_200 and ema_50_1h > ema_200_1h and rsi_5m < rsi_1h - buy_rsi_diff
+//-------------------------
+ 
+//SELL logic
+bb_rsi_close_sell    = rsi_5m > sell_rsi_bb and close > upper2 and close[1] > upper2[1] and close[2] > upper2[2]
+rsi_main_sell        = rsi_5m > sell_rsi_main
+rsi2_ema_close_sell  = close < ema_200 and close > ema_50 and rsi_5m > sell_rsi_2
+rsi1h_rsirel_close_ema_sell = close < ema_200 and ((ema_200 - close)/close) < sell_ema_relative and rsi_5m > rsi_1h + sell_rsi_diff
+//--------------------------
+ 
+ 
+
+//DEBUG 
+plotchar(bb40_long, "bb40_long", "", location = location.top)
+plotchar(bb20_long, "bb20_long", "", location = location.top)
+plotchar(ssl_long, "ssl_long", "", location = location.top)
+plotchar(bb_rsi_close_sell, "bb_rsi_close_sell", "", location = location.top)
+plotchar(rsi_main_sell, "rsi_main_sell", "", location = location.top)
+plotchar(rsi2_ema_close_sell, "rsi2_ema_close_sell", "", location = location.top)
+plotchar(rsi1h_rsirel_close_ema_sell, "rsi1h_rsirel_close_ema_sell", "", location = location.top)
+//--------------
+
+
+afterStartDate = (time >= startDate)
+longCondition = (bb40_long == 1 or bb20_long == 1 or ssl_long ==1) and afterStartDate and strategy.position_size <= 0
+if (longCondition)
+    strategy.entry("Entry", strategy.long, when=(bb40_long) , comment = 'bb40_long')
+    strategy.entry("Entry", strategy.long, when=(bb20_long) , comment = 'bb20_long')
+    strategy.entry("Entry", strategy.long, when=(ssl_long)  , comment = 'ssl_long')
+
+if (strategy.position_size > 0)
+    strategy.close(id="Entry", when=(bb_rsi_close_sell) , comment = 'bb_rsi_close_sell')
+    strategy.close(id="Entry", when=(rsi_main_sell)     , comment = 'rsi_main_sell')
+    strategy.close(id="Entry", when=(rsi2_ema_close_sell) , comment = 'bb_rsi_close_sell')
+    strategy.close(id="Entry", when=(rsi1h_rsirel_close_ema_sell) , comment = 'rsi1h_rsirel_close_ema_sell')
