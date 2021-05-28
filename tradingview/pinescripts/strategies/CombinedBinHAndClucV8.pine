@@ -1,0 +1,211 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © viktors.s@gmail.com
+
+
+//@version=4
+strategy("CombinedBinHAndClucV8", overlay=true, currency=currency.EUR, default_qty_type=strategy.cash, default_qty_value=150, initial_capital = 33000, calc_on_every_tick=true,commission_type=strategy.commission.percent, commission_value =0.15)
+
+
+startDate  = input(title="Start Strat", type=input.time, defval=timestamp("01 Jan 2021 00:00 +0000") )
+
+
+buy_dip_threshold_0     = input(title="Buy bb40 bbdelta close", type=input.float,     defval= 0.015, step =0.001, minval = 0.001, maxval = 0.1)
+buy_dip_threshold_1     = input(title="Buy bb40 bbdelta close", type=input.float,     defval= 0.12, step =0.001, minval = 0.001, maxval = 0.2)
+buy_dip_threshold_2     = input(title="Buy bb40 bbdelta close", type=input.float,     defval= 0.28, step =0.001, minval = 0.001, maxval = 0.4)
+buy_dip_threshold_3     = input(title="Buy bb40 bbdelta close", type=input.float,     defval= 0.36, step =0.001, minval = 0.001, maxval = 0.44)
+
+
+buy_bb40_length            = input(title="Buy bb40 length", type=input.integer,          defval= 40, step =1, minval = 5, maxval = 100) 
+buy_bb40_bbdelta_close     = input(title="Buy bb40 bbdelta close", type=input.float,     defval= 0.031, step =0.001, minval = 0.005, maxval = 0.1)
+buy_bb40_closedelta_close  = input(title="Buy bb40 closedelta close", type=input.float,  defval= 0.021, step =0.001, minval = 0.01,  maxval = 0.03)
+buy_bb40_tail_bbdelta      = input(title="Buy bb40 tail bbdelta", type=input.float,      defval= 0.264, step =0.001, minval = 0.15,  maxval = 0.45)
+
+
+buy_bb20_length            = input(title="Buy bb20 length", type=input.integer,          defval= 20, step =1, minval = 5, maxval = 100) 
+buy_bb20_close_bblowerband = input(title="Buy bb20 close bblowerband", type=input.float, defval= 0.992, step =0.001, minval = 0.8,   maxval = 1.1)
+buy_bb20_volume            = input(title="Buy bb20 volume", type=input.integer,          defval= 29,    step =1,     minval = 18,    maxval = 34 )
+buy_rsi_diff               = input(title="Buy RSI Diff", type=input.float,               defval= 50.48,  step =0.1,   minval = 36.0,  maxval = 54.0)
+buy_min_inc                = input(title="Buy Min Inc", type=input.float,                defval= 0.01,  step =0.1,   minval = 0.005,  maxval = 0.05)
+buy_rsi_1h                 = input(title="Buy RSI 1h", type=input.float,                 defval= 67.0,  step =0.1,   minval =40.0,  maxval =70.0)
+buy_rsi                    = input(title="Buy RSI", type=input.float,                    defval= 38.5,  step =0.1,   minval =30.0,  maxval =40.0)
+buy_mfi                    = input(title="Buy MFI", type=input.float,                    defval= 36.0,  step =0.1,   minval =36.0,  maxval =65.0)
+buy_volume_1               = input(title="Buy Volume 1", type=input.float,               defval= 2.0,  step =0.1,   minval =1.0,  maxval =10.0)
+buy_ema_open_mult_1        = input(title="Buy EMA open mult 1", type=input.float,        defval= 0.02,  step =0.01,   minval =0.01,  maxval =0.05)
+
+
+
+
+sell_custom_roi_profit_1    = input(title="Sell custom roi profit 1", type=input.float,     defval= 0.01, step =0.01, minval = 0.01, maxval = 0.03)
+sell_custom_roi_rsi_1       = input(title="Sell custom roi rsi 1"   , type=input.float,     defval= 50, step =0.01, minval = 40.0, maxval = 56.0)
+
+sell_custom_roi_profit_2    = input(title="Sell custom roi profit 2", type=input.float,     defval= 0.04, step =0.01, minval = 0.01, maxval = 0.20)
+sell_custom_roi_rsi_2       = input(title="Sell custom roi rsi 2"   , type=input.float,     defval= 50, step =0.01, minval = 42.0, maxval = 56.0)
+
+sell_custom_roi_profit_3    = input(title="Sell custom roi profit 3", type=input.float,     defval= 0.08, step =0.01, minval = 0.15, maxval = 0.30)
+sell_custom_roi_rsi_3       = input(title="Sell custom roi rsi 3"   , type=input.float,      defval= 56,   step =0.01, minval = 44.0, maxval = 58.0)
+
+sell_custom_roi_profit_4    = input(title="Sell custom roi profit 4", type=input.float,     defval= 0.14, step =0.01, minval = 0.3, maxval = 0.7)
+sell_custom_roi_rsi_4       = input(title="Sell custom roi rsi 4"   , type=input.float,      defval= 58,   step =0.01, minval = 44.0, maxval = 60.0)
+
+
+sell_custom_roi_profit_5    = input(title="Sell custom roi profit 5", type=input.float,     defval= 0.04, step =0.01, minval = 0.01, maxval = 0.1)
+
+sell_trail_profit_min_1    = input(title="Sell trail profit min 1", type=input.float,     defval= 0.1, step =0.01, minval = 0.1, maxval = 0.25)
+sell_trail_profit_max_1    = input(title="Sell trail profit max 1", type=input.float,     defval= 0.4, step =0.01, minval = 0.3, maxval = 0.5)
+sell_trail_down_1          = input(title="Sell trail down 1", type=input.float,     defval= 0.03, step =0.01, minval = 0.04, maxval = 0.1)
+
+
+sell_trail_profit_min_2    = input(title="Sell trail profit min 2", type=input.float,     defval= 0.02, step =0.01, minval = 0.01, maxval =0.1)
+sell_trail_profit_max_2    = input(title="Sell trail profit max 2", type=input.float,     defval= 0.1, step =0.01, minval = 0.08, maxval =0.25)
+sell_trail_down_2          = input(title="Sell trail down 2", type=input.float,     defval= 0.015, step =0.01, minval = 0.01, maxval =0.2)
+
+sell_custom_stoploss_1      = input(title="Sell custom stoploss 1", type=input.float,     defval= -0.05, step =0.01, minval = -0.15, maxval =-0.03)
+
+
+sell_rsi_main              = input(title="Sell RSI main", type=input.float  ,            defval= 80.0,  step =1,   minval = 50.0,  maxval = 90.0)
+
+
+
+
+
+//strategy bb40
+[middle, upper, lower] = bb(close, buy_bb40_length, 2)
+bbdelta = abs(middle - lower)
+closedelta = abs(close -close[1])
+tail = abs(close - low)
+
+
+//strategy bb20
+[middle2, upper2, lower2] = bb(close, buy_bb20_length, 2)
+p_middle = plot(middle2, color=color.aqua)
+p_upper = plot(upper2, color=color.silver)
+p_lower = plot(lower2, color=color.silver)
+fill(p_lower,p_upper)
+
+ema_slow = ema(close,50)
+volume_mean_slow = sum(volume,30)/30
+volume_mean_4 = sum(volume,4)/4
+plot(ema_slow, color=color.red)
+
+ema_12  =  ema(close,12)
+ema_26 =  ema(close,26)
+ema_20  =  ema(close,20)
+ema_50  =  ema(close,50)
+ema_100  =  ema(close,100)
+ema_200 =  ema(close,200)
+sma_5   =  sma(close,5)
+sma_9   =  sma(close,9)
+sma_200   =  sma(close,200)
+
+rsi_5m     =  rsi(close,14)
+
+atr_5m  = atr(14)
+sma_high = sma(high,20)
+sma_low= sma(low,20)
+
+
+sma_200_dec = sma_200 < sma_200[20]
+
+mfi_5m = mfi(close, 14)
+
+plotchar(rsi_5m, "rsi_5m", "", location = location.top)
+
+//1h ... !
+
+
+ema_20_1h = security(syminfo.tickerid, '60', ema_20)
+ema_100_1h = security(syminfo.tickerid, '60', ema_100)
+ema_50_1h = security(syminfo.tickerid, '60', ema_50)
+ema_200_1h = security(syminfo.tickerid, '60', ema_200)
+rsi_1h = security(syminfo.tickerid, '60', rsi_5m)
+atr_1h = security(syminfo.tickerid, '60', atr_5m)
+sma_high_1h = security(syminfo.tickerid, '60', sma_high) + atr_1h
+sma_low_1h = security(syminfo.tickerid, '60', sma_low) - atr_1h
+close_1h = security(syminfo.tickerid, '60', close)
+sma_200_1h = security(syminfo.tickerid, '60', sma_200)
+sma_200_dec_1h = security(syminfo.tickerid, '60', sma_200_dec)
+
+
+
+float Hlv_1h = na
+Hlv_1h := close_1h > sma_high_1h ? 1 : close_1h < sma_low_1h ? -1 : Hlv_1h[1]
+sslDown_1h = Hlv_1h < 0 ? sma_high_1h: sma_low_1h
+sslUp_1h   = Hlv_1h < 0 ? sma_low_1h : sma_high_1h
+
+
+//  BUY logic :)
+bb40_long = close > ema_200_1h and ema_50 > ema_200 and ema_50_1h > ema_200_1h and  ((highest(open,2) - close)/close) < buy_dip_threshold_1 and ((highest(open,12) - close)/close) < buy_dip_threshold_2  and lower[1] > 0 and bbdelta > close * buy_bb40_bbdelta_close and  closedelta > close * buy_bb40_closedelta_close and tail < bbdelta * buy_bb40_tail_bbdelta and close < lower[1] and close <= close[1] 
+bb20_long = close > ema_200 and close > ema_200_1h and ema_50_1h > ema_100_1h and ema_50_1h > ema_200_1h and ((highest(open,2) - close)/close) < buy_dip_threshold_1 and ((highest(open,12) - close)/close) < buy_dip_threshold_2    and close < ema_slow and close < buy_bb20_close_bblowerband * lower2 and volume < volume_mean_slow[1] * buy_bb20_volume 
+ssl_long  = close < sma_5 and sslUp_1h > sslDown_1h and ema_50 > ema_200 and ema_50_1h > ema_200_1h and ((highest(open,2) - close)/close) < buy_dip_threshold_1 and ((highest(open,12) - close)/close) < buy_dip_threshold_2 and ((highest(open,144) - close)/close) < buy_dip_threshold_3  and rsi_5m < rsi_1h - buy_rsi_diff
+rsi_sma_long =  sma_200 > sma_200[20] and sma_200_1h > sma_200_1h[16] and ((highest(open,2) - close)/close) < buy_dip_threshold_1 and ((highest(open,12) - close)/close) < buy_dip_threshold_2 and ((highest(open,144) - close)/close) < buy_dip_threshold_3 and ((lowest(open,24) - close)/close) > buy_min_inc and rsi_1h > buy_rsi_1h and rsi_5m < buy_rsi and mfi_5m < buy_mfi
+ema_volume_long  = close > ema_100_1h and ema_50_1h > ema_100_1h and ((highest(open,2) - close)/close) < buy_dip_threshold_1 and ((highest(open,12) - close)/close) < buy_dip_threshold_2 and ((highest(open,144) - close)/close) < buy_dip_threshold_3 and  volume_mean_4 * buy_volume_1 > volume and ema_26 > ema_12 and ema_26 - ema_12 > open * buy_ema_open_mult_1 and ema_26[1] - ema_12[1] > open/100 and close < lower2
+//-------------------------
+
+afterStartDate = (time >= startDate)
+longCondition = (bb40_long == 1 or bb20_long == 1 or ssl_long ==1 or rsi_sma_long ==1 or ema_volume_long==1 ) and afterStartDate and strategy.position_size <= 0
+
+//SELL logic
+bb_close_sell    = close > upper2 and close[1] > upper2[1] and close[2] > upper2[2] and close[3] > upper2[3]
+rsi_main_sell    = rsi_5m > sell_rsi_main
+
+
+
+
+rioProfit4 = (strategy.position_avg_price * (1 + sell_custom_roi_profit_4))
+plot(rioProfit4, color=color.green, style=plot.style_linebr, linewidth=2, title='rioProfit4')
+roi_sell_4 = (rsi_5m >= sell_custom_roi_rsi_4 and rioProfit4 < close)  
+
+rioProfit3 = (strategy.position_avg_price * (1 + sell_custom_roi_profit_3))
+plot(rioProfit3, color=color.green, style=plot.style_linebr, linewidth=2, title='rioProfit3')
+roi_sell_3 = (rsi_5m >= sell_custom_roi_rsi_3 and rioProfit3 < close)  
+
+rioProfit2 = (strategy.position_avg_price * (1 + sell_custom_roi_profit_2))
+plot(rioProfit2, color=color.green, style=plot.style_linebr, linewidth=2, title='rioProfit2')
+roi_sell_2 = (rsi_5m >= sell_custom_roi_rsi_2 and rioProfit2 < close)  
+
+rioProfit1 = (strategy.position_avg_price * (1 + sell_custom_roi_profit_1))
+plot(rioProfit1, color=color.green, style=plot.style_linebr, linewidth=2, title='rioProfit1')
+roi_sell_1 = (rsi_5m >= sell_custom_roi_rsi_1 and rioProfit1 < close)  
+
+
+//profit = strategy.netprofit
+//plotchar(profit, "profit", "", location = location.top)
+//trailProfit1 = (strategy.position_avg_price * (1 + sell_trail_profit_min_1)) > close and  (strategy.position_avg_price * (1 + sell_trail_profit_max_1))
+
+//barssince(longCondition)
+
+
+//--------------------------
+ 
+ 
+
+//DEBUG 
+plotchar(bb40_long, "bb40_long", "", location = location.top)
+plotchar(bb20_long, "bb20_long", "", location = location.top)
+plotchar(ssl_long, "ssl_long", "", location = location.top)
+plotchar(rsi_sma_long, "rsi_sma_long", "", location = location.top)
+plotchar(ema_volume_long, "ema_volume_long", "", location = location.top)
+
+plotchar(bb_close_sell, "bb_close_sell", "", location = location.top)
+plotchar(rsi_main_sell, "rsi_main_sell", "", location = location.top)
+
+//--------------
+
+
+
+
+if (longCondition)
+    strategy.entry("Entry", strategy.long, when=(bb40_long) , comment = 'bb40_long')
+    strategy.entry("Entry", strategy.long, when=(bb20_long) , comment = 'bb20_long')
+    strategy.entry("Entry", strategy.long, when=(ssl_long)  , comment = 'ssl_long')
+    strategy.entry("Entry", strategy.long, when=(rsi_sma_long)  , comment = 'rsi_sma_long')
+    strategy.entry("Entry", strategy.long, when=(ema_volume_long)  , comment = 'ema_volume_long')
+
+if (strategy.position_size > 0)
+    strategy.close(id="Entry", when=(bb_close_sell) , comment = 'bb_close_sell')
+    strategy.close(id="Entry", when=(rsi_main_sell)     , comment = 'rsi_main_sell')
+    
+    strategy.close(id="Entry", when=(roi_sell_4)     , comment = 'roi_sell_4')
+    strategy.close(id="Entry", when=(roi_sell_3)     , comment = 'roi_sell_3')
+    strategy.close(id="Entry", when=(roi_sell_2)     , comment = 'roi_sell_2')
+    strategy.close(id="Entry", when=(roi_sell_1)     , comment = 'roi_sell_1')
