@@ -11,7 +11,10 @@ strategy("CombinedBinHAndClucV8", overlay=true, currency=currency.EUR, default_q
 startDate                   = input(title="Start Strat", type=input.time, defval=timestamp("01 Jan 2021 00:00 +0000") )
 enableTimeout               = input(title="Stoploss - Enable Timeout", type=input.bool, defval=true)
 timeoutMinuts               = input(title="Stoploss - Timeout minuts", type=input.integer, defval=280, step =1, minval = 100000 )
-sell_custom_stoploss_1      = input(title="Sell custom stoploss 1", type=input.float,     defval= -0.05, step =0.01, minval = -0.15, maxval =-0.03)
+
+enableStoplossSMA           = input(title="Stoploss - Enable SMA for Stoploss", type=input.bool, defval=true)
+sell_custom_stoploss_1      = input(title="Sell custom stoploss", type=input.float,     defval= -0.05, step =0.01, minval = -0.15, maxval =-0.03)
+
 
 buy_dip_threshold_0     = input(title="Buy bb40 bbdelta close", type=input.float,     defval= 0.015, step =0.001, minval = 0.001, maxval = 0.1)
 buy_dip_threshold_1     = input(title="Buy bb40 bbdelta close", type=input.float,     defval= 0.12, step =0.001, minval = 0.001, maxval = 0.2)
@@ -157,7 +160,7 @@ istimeout = enableTimeout? barssince(longCondition) >= (timeoutMinuts/5): na // 
 
 st_loss =  (strategy.position_avg_price * (1 + sell_custom_stoploss_1))
 plot(st_loss, color=color.red, style=plot.style_linebr, linewidth=2, title='st_loss')
-isstoploss = st_loss > close
+isstoploss = st_loss > close and (enableStoplossSMA ? sma_200_dec and sma_200_dec_1h : true)
 
 rioProfit4 = (strategy.position_avg_price * (1 + sell_custom_roi_profit_4))
 plot(rioProfit4, color=color.green, style=plot.style_linebr, linewidth=2, title='rioProfit4')
