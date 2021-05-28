@@ -8,9 +8,10 @@
 strategy("CombinedBinHAndClucV8", overlay=true, currency=currency.EUR, default_qty_type=strategy.cash, default_qty_value=150, initial_capital = 33000, calc_on_every_tick=true,commission_type=strategy.commission.percent, commission_value =0.15)
 
 
-startDate  = input(title="Start Strat", type=input.time, defval=timestamp("01 Jan 2021 00:00 +0000") )
-enableTimeout   = input(title="Stoploss - Enable Timeout", type=input.bool, defval=true)
-timeoutMinuts  = input(title="Stoploss - Timeout minuts", type=input.integer, defval=280, step =1, minval = 100000 )
+startDate                   = input(title="Start Strat", type=input.time, defval=timestamp("01 Jan 2021 00:00 +0000") )
+enableTimeout               = input(title="Stoploss - Enable Timeout", type=input.bool, defval=true)
+timeoutMinuts               = input(title="Stoploss - Timeout minuts", type=input.integer, defval=280, step =1, minval = 100000 )
+sell_custom_stoploss_1      = input(title="Sell custom stoploss 1", type=input.float,     defval= -0.05, step =0.01, minval = -0.15, maxval =-0.03)
 
 buy_dip_threshold_0     = input(title="Buy bb40 bbdelta close", type=input.float,     defval= 0.015, step =0.001, minval = 0.001, maxval = 0.1)
 buy_dip_threshold_1     = input(title="Buy bb40 bbdelta close", type=input.float,     defval= 0.12, step =0.001, minval = 0.001, maxval = 0.2)
@@ -62,7 +63,7 @@ sell_trail_profit_min_2    = input(title="Sell trail profit min 2", type=input.f
 sell_trail_profit_max_2    = input(title="Sell trail profit max 2", type=input.float,     defval= 0.1, step =0.01, minval = 0.08, maxval =0.25)
 sell_trail_down_2          = input(title="Sell trail down 2", type=input.float,     defval= 0.015, step =0.01, minval = 0.01, maxval =0.2)
 
-sell_custom_stoploss_1      = input(title="Sell custom stoploss 1", type=input.float,     defval= -0.05, step =0.01, minval = -0.15, maxval =-0.03)
+
 
 
 sell_rsi_main              = input(title="Sell RSI main", type=input.float  ,            defval= 80.0,  step =1,   minval = 50.0,  maxval = 90.0)
@@ -154,6 +155,10 @@ rsi_main_sell    = rsi_5m > sell_rsi_main
 //stoploss timeout
 istimeout = enableTimeout? barssince(longCondition) >= (timeoutMinuts/5): na // 60 * 5 = 300 min
 
+st_loss =  (strategy.position_avg_price * (1 + sell_custom_stoploss_1))
+plot(st_loss, color=color.red, style=plot.style_linebr, linewidth=2, title='st_loss')
+isstoploss = st_loss > close
+
 rioProfit4 = (strategy.position_avg_price * (1 + sell_custom_roi_profit_4))
 plot(rioProfit4, color=color.green, style=plot.style_linebr, linewidth=2, title='rioProfit4')
 roi_sell_4 = (rsi_5m >= sell_custom_roi_rsi_4 and rioProfit4 < close)  
@@ -213,3 +218,5 @@ if (strategy.position_size > 0)
     strategy.close(id="Entry", when=(roi_sell_2)     , comment = 'roi_sell_2')
     strategy.close(id="Entry", when=(roi_sell_1)     , comment = 'roi_sell_1')
     strategy.close(id="Entry", when=(istimeout)      , comment = 'stoploss - timeout ')
+    strategy.close(id="Entry", when=(isstoploss)      , comment = 'stoploss')
+    
