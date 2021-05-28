@@ -164,19 +164,36 @@ isstoploss = st_loss > close and (enableStoplossSMA ? sma_200_dec and sma_200_de
 
 rioProfit4 = (strategy.position_avg_price * (1 + sell_custom_roi_profit_4))
 plot(rioProfit4, color=color.green, style=plot.style_linebr, linewidth=2, title='rioProfit4')
-roi_sell_4 = (rsi_5m >= sell_custom_roi_rsi_4 and rioProfit4 < close)  
+roi_sell_4 = (rsi_5m < sell_custom_roi_rsi_4 and rioProfit4 < close)  
 
 rioProfit3 = (strategy.position_avg_price * (1 + sell_custom_roi_profit_3))
 plot(rioProfit3, color=color.green, style=plot.style_linebr, linewidth=2, title='rioProfit3')
-roi_sell_3 = (rsi_5m >= sell_custom_roi_rsi_3 and rioProfit3 < close)  
+roi_sell_3 = (rsi_5m <  sell_custom_roi_rsi_3 and rioProfit3 < close)  
 
 rioProfit2 = (strategy.position_avg_price * (1 + sell_custom_roi_profit_2))
 plot(rioProfit2, color=color.green, style=plot.style_linebr, linewidth=2, title='rioProfit2')
-roi_sell_2 = (rsi_5m >= sell_custom_roi_rsi_2 and rioProfit2 < close)  
+roi_sell_2 = (rsi_5m <  sell_custom_roi_rsi_2 and rioProfit2 < close)  
 
 rioProfit1 = (strategy.position_avg_price * (1 + sell_custom_roi_profit_1))
 plot(rioProfit1, color=color.green, style=plot.style_linebr, linewidth=2, title='rioProfit1')
-roi_sell_1 = (rsi_5m >= sell_custom_roi_rsi_1 and rioProfit1 < close)  
+roi_sell_1 = (rsi_5m < sell_custom_roi_rsi_1 and rioProfit1 < close)  
+
+
+open_trade =  barssince(longCondition) 
+plotchar(open_trade, "open_trade", "", location = location.top)
+trailProfit1_min      =   (strategy.position_avg_price * (1 + sell_trail_profit_min_1))
+trailProfit1_max      =   (strategy.position_avg_price * (1 + sell_trail_profit_max_1))
+trailProfit1_max_rate =  0 //(strategy.position_size > 0) ? highest(close, open_trade) : na
+trailProfit1_down     =   (close * (1 + sell_trail_down_1)) 
+trailProfit1          =  close > trailProfit1_min and close < trailProfit1_max and (trailProfit1_max_rate - strategy.position_avg_price) > trailProfit1_down
+
+
+trailProfit2_min      =   (strategy.position_avg_price * (1 + sell_trail_profit_min_2))
+trailProfit2_max      =   (strategy.position_avg_price * (1 + sell_trail_profit_max_2))
+trailProfit2_max_rate =  0//highest(close, barssince(longCondition))
+trailProfit2_down     =   (close * (1 + sell_trail_down_2)) 
+trailProfit2          =  close > trailProfit2_min and close < trailProfit2_max and (trailProfit2_max_rate - strategy.position_avg_price) > trailProfit2_down
+
 
 
 //profit = strategy.netprofit
@@ -222,4 +239,8 @@ if (strategy.position_size > 0)
     strategy.close(id="Entry", when=(roi_sell_1)     , comment = 'roi_sell_1')
     strategy.close(id="Entry", when=(istimeout)      , comment = 'stoploss - timeout ')
     strategy.close(id="Entry", when=(isstoploss)      , comment = 'stoploss')
+    
+    strategy.close(id="Entry", when=(trailProfit1)      , comment = 'trailProfit1')
+    strategy.close(id="Entry", when=(trailProfit2)      , comment = 'trailProfit2')
+    
     
