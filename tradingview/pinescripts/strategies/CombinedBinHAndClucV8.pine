@@ -1,5 +1,7 @@
 // This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
-// © viktors.s@gmail.com
+// © viktors.s@gmail.com   
+// freqtrade author: iterativ   
+// translate to tradingview: viksal1982
 
 
 //@version=4
@@ -7,7 +9,8 @@ strategy("CombinedBinHAndClucV8", overlay=true, currency=currency.EUR, default_q
 
 
 startDate  = input(title="Start Strat", type=input.time, defval=timestamp("01 Jan 2021 00:00 +0000") )
-
+enableTimeout   = input(title="Stoploss - Enable Timeout", type=input.bool, defval=true)
+timeoutMinuts  = input(title="Stoploss - Timeout minuts", type=input.integer, defval=280, step =1, minval = 100000 )
 
 buy_dip_threshold_0     = input(title="Buy bb40 bbdelta close", type=input.float,     defval= 0.015, step =0.001, minval = 0.001, maxval = 0.1)
 buy_dip_threshold_1     = input(title="Buy bb40 bbdelta close", type=input.float,     defval= 0.12, step =0.001, minval = 0.001, maxval = 0.2)
@@ -148,8 +151,8 @@ longCondition = (bb40_long == 1 or bb20_long == 1 or ssl_long ==1 or rsi_sma_lon
 bb_close_sell    = close > upper2 and close[1] > upper2[1] and close[2] > upper2[2] and close[3] > upper2[3]
 rsi_main_sell    = rsi_5m > sell_rsi_main
 
-
-
+//stoploss timeout
+istimeout = enableTimeout? barssince(longCondition) >= (timeoutMinuts/5): na // 60 * 5 = 300 min
 
 rioProfit4 = (strategy.position_avg_price * (1 + sell_custom_roi_profit_4))
 plot(rioProfit4, color=color.green, style=plot.style_linebr, linewidth=2, title='rioProfit4')
@@ -209,3 +212,4 @@ if (strategy.position_size > 0)
     strategy.close(id="Entry", when=(roi_sell_3)     , comment = 'roi_sell_3')
     strategy.close(id="Entry", when=(roi_sell_2)     , comment = 'roi_sell_2')
     strategy.close(id="Entry", when=(roi_sell_1)     , comment = 'roi_sell_1')
+    strategy.close(id="Entry", when=(istimeout)      , comment = 'stoploss - timeout ')
