@@ -203,7 +203,7 @@ class BoomHunter(IStrategy):
         dataframe['sma200'] = ta.SMA(dataframe,timeperiod = 200)
         dataframe['ema200'] = ta.EMA(dataframe,timeperiod = 200)
 
-        dataframe.to_csv('test.csv')
+       
 
        
 
