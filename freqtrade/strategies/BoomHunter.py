@@ -16,14 +16,10 @@ import freqtrade.vendor.qtpylib.indicators as qtpylib
 
 import math
 
-
-    """
-      https://www.tradingview.com/script/WJSDkJwU-Boom-Hunter/ 
-
-      translated for freqtrade: viksal1982  viktors.s@gmail.com
-
-
-    """
+"""
+    https://www.tradingview.com/script/WJSDkJwU-Boom-Hunter/ 
+    translated for freqtrade: viksal1982  viktors.s@gmail.com
+"""
 
 
 
@@ -203,7 +199,7 @@ class BoomHunter(IStrategy):
         dataframe['sma200'] = ta.SMA(dataframe,timeperiod = 200)
         dataframe['ema200'] = ta.EMA(dataframe,timeperiod = 200)
 
-       
+        dataframe.to_csv('test.csv')
 
        
 
