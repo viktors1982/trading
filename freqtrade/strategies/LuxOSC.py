@@ -190,7 +190,7 @@ class LuxOSC(IStrategy):
             (
                 
                 (qtpylib.crossed_above(dataframe['osc'], int(self.cross_buy.value))) &  
-                (dataframe['supertrend'] >  dataframe['close'] ) &
+                (dataframe['supertrend'] <  dataframe['close'] ) &
                 (dataframe['volume'] > 0)  
             ),
             'buy'] = 1
