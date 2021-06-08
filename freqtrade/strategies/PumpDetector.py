@@ -94,14 +94,13 @@ class PumpDetector(IStrategy):
     plot_config = {
         # Main plot indicators (Moving averages, ...)
         'main_plot': {
-            'sma200': {'color': 'blue'},
+        
         },
         'subplots': {
             # Subplots - each dict defines one additional plot
-            "Boom": {
-                'Quotient1': {'color': 'blue'},
-                'Quotient2': {'color': 'orange'},
-                'Line1': {'color': 'red'},
+            "XSA": {
+                'j': {'color': 'blue'},
+                'k': {'color': 'orange'},
             } 
         }
     }
@@ -156,7 +155,8 @@ class PumpDetector(IStrategy):
         dataframe.loc[
             (
                 
-                (qtpylib.crossed_above(dataframe['j'],  90)) &   
+                ((qtpylib.crossed_above(dataframe['j'],  90))  |
+                (qtpylib.crossed_below(dataframe['j'], dataframe['k']) & dataframe['j'] > 50)  )  & 
                 (dataframe['volume'] > 0)  # Make sure Volume is not 0
             ),
             'sell'] = 1
