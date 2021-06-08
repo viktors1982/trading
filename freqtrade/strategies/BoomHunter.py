@@ -77,18 +77,15 @@ class BoomHunter(IStrategy):
     plot_config = {
         # Main plot indicators (Moving averages, ...)
         'main_plot': {
-            'tema': {},
-            'sar': {'color': 'white'},
+            'sma200': {'color': 'blue'},
         },
         'subplots': {
             # Subplots - each dict defines one additional plot
-            "MACD": {
-                'macd': {'color': 'blue'},
-                'macdsignal': {'color': 'orange'},
-            },
-            "RSI": {
-                'rsi': {'color': 'red'},
-            }
+            "Boom": {
+                'Quotient1': {'color': 'blue'},
+                'Quotient2': {'color': 'orange'},
+                'Line1': {'color': 'red'},
+            } 
         }
     }
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
@@ -113,17 +110,11 @@ class BoomHunter(IStrategy):
         dataframe['d9'] = ta.SMA(dataframe['k9'], timeperiod =  smoothD)
 
         alpha1 = 0.00 
-        HP = 0.00 
         a1 = 0.00 
         b1 = 0.00 
         c1 = 0.00 
         c2 = 0.00 
         c3 = 0.00 
-        Filt = 0.00 
-        Peak = 0.00
-        X = 0.00 
-        Quotient1 = 0.00 
-        Quotient2 = 0.00
         pi = 2 * math.asin(1)
 
         alpha1 = ( math.cos( .707 * 2 * pi / 100 ) + math.sin( .707 * 2 * pi / 100 ) - 1 ) / math.cos( .707 * 2 * pi / 100 ) 
@@ -192,6 +183,7 @@ class BoomHunter(IStrategy):
         dataframe['X'] = np.where(dataframe['Peak'] != 0, dataframe['Filt']/dataframe['Peak'], 0)
         dataframe['Quotient1'] = (dataframe['X'] + K1) / ( K1 * dataframe['X'] + 1 )
         dataframe['Quotient2'] = (dataframe['X'] + K2) / ( K2 * dataframe['X'] + 1 )
+        dataframe['Line1'] = float(self.line1.value)
 
         dataframe['ema1'] = ta.EMA(dataframe, timeperiod = 30)
         dataframe['sma10'] = ta.SMA(dataframe, timeperiod = 10)
@@ -199,7 +191,7 @@ class BoomHunter(IStrategy):
         dataframe['sma200'] = ta.SMA(dataframe,timeperiod = 200)
         dataframe['ema200'] = ta.EMA(dataframe,timeperiod = 200)
 
-        dataframe.to_csv('test.csv')
+        # dataframe.to_csv('test.csv')
 
        
 
