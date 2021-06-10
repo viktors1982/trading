@@ -1,0 +1,94 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © VikSal1982
+// freqtrade authors: https://discord.gg/MA9v74M  @Perkmeister 's hyperopted version of @LamborghiniAventador 's SMAOffsetProtect strat, heavily based on @tirail 's original SMAOffset
+//@version=4
+
+strategy("SMAOffsetProtectOptV0", overlay=true, currency=currency.EUR, default_qty_type=strategy.cash, default_qty_value=150, initial_capital = 33000, calc_on_every_tick=true,commission_type=strategy.commission.percent, commission_value =0.15)
+
+
+
+startDate                      = input(title="Start Strat", type=input.time, defval=timestamp("01 Jan 2021 00:00 +0000"), group = "buy" )
+
+base_nb_candles_buy            = input(title="Buy base nb candles", type=input.integer, defval= 20, step =1, minval = 5, maxval = 100, group = "buy") 
+low_offset                     = input(title="low_offset", type=input.float,     defval=  0.975, step =0.01, minval = 0.9, maxval = 0.990, group = "buy")
+buy_trigger                    = input(title="Buy trigger", type=input.string, defval="EMA", options=["SMA","EMA"], group = "buy")
+ewo_low                        = input(title="ewo_low", type=input.float,     defval=  -19.881, step =0.01, minval = -20.0, maxval = -8.00, group = "buy")
+ewo_high                       = input(title="ewo_high", type=input.float,     defval=   5.499, step =0.01, minval = 2.0, maxval = 12.00, group = "buy")
+fast_ewo                       = input(title="fast_ewo", type=input.integer,     defval=   50, step =1, minval = 10, maxval = 500, group = "buy")
+slow_ewo                       = input(title="slow_ewo", type=input.integer,     defval=   200, step =1, minval = 100, maxval = 2000, group = "buy")
+rsi_buy                        = input(title="rsi_buy", type=input.integer,     defval=   67, step =1, minval = 30, maxval = 700, group = "buy")
+
+
+base_nb_candles_sell           = input(title="Sell base nb candles", type=input.integer, defval= 24, step =1, minval = 5, maxval = 100, group = "sell") 
+high_offset                    = input(title="High offset", type=input.float,     defval=  1.012, step =0.01, minval = 0.99, maxval = 1.1, group = "sell")
+sell_trigger                   = input(title="Sell trigger", type=input.string, defval="EMA", options=["SMA","EMA"], group = "sell")
+
+enableRoi                      = input(title="RIO", type=input.bool, defval=true, group = "roi" )
+sell_roi                       = input(title="Sell  roi", type=input.float,     defval= 0.01, step =0.001, minval = 0.01, maxval = 0.2, group = "roi")
+
+enableST                      = input(title="Stoploss", type=input.bool, defval=true, group = "stoploss" )
+sell_st                       = input(title="Sell Stoploss", type=input.float,     defval= -0.05, step =0.001, minval = -0.5, maxval = -0.001, group = "stoploss")
+
+
+
+ma_type(type, src, len) =>
+    float result = 0
+    if type=="SMA" // Simple
+        result := sma(src, len)
+    if type=="EMA" // Exponential
+        result := ema(src, len)
+    result
+        
+ma_buy  = ma_type(buy_trigger,  close, base_nb_candles_buy)
+ma_sell = ma_type(sell_trigger, close, base_nb_candles_sell)
+rsi_14  = rsi(close, 14)
+
+
+ewo = ((ema(close, fast_ewo) - ema(close, slow_ewo))/close) * 100
+
+long_1 = close < (ma_buy * low_offset) and ewo > ewo_high and rsi_14 < rsi_buy
+long_2 = close < (ma_buy * low_offset) and ewo < ewo_low 
+
+sell   = close > (ma_sell * high_offset)
+
+
+rioProfit =enableRoi? (strategy.position_avg_price * (1 + sell_roi)) : na
+plot(rioProfit, color=color.green, style=plot.style_linebr, linewidth=2, title='rioProfit')
+//roi_sell = (rioProfit < close)  
+
+sell_stoploss = sell_st? (strategy.position_avg_price * (1 + sell_st)) : na
+plot(sell_stoploss, color=color.red, style=plot.style_linebr, linewidth=2, title='sell_stoploss')
+
+m = plot((ma_buy), color=color.blue, linewidth = 1)
+ms = plot((ma_sell), color=color.red, linewidth = 1)
+ml = plot((ma_buy * low_offset), color=color.blue, linewidth = 2)
+msl =plot((ma_sell * high_offset), color=color.red, linewidth = 2)
+
+fill(m, ml,  color.green)
+fill(ms, msl,  color.yellow)
+
+
+//debug
+plotchar(ma_buy, "ma_buy", "", location = location.top)
+plotchar(ma_sell, "ma_sell", "", location = location.top)
+plotchar(ewo, "ewo", "", location = location.top)
+plotchar(rsi_14, "rsi_14", "", location = location.top)
+
+//-----
+
+
+afterStartDate = (time >= startDate)
+longCondition = (long_1 == 1 or long_2 == 1) and afterStartDate  and strategy.position_size <= 0
+
+
+if (longCondition)
+    strategy.entry("Entry", strategy.long, when=(long_1) , comment = 'long_1')
+    strategy.entry("Entry", strategy.long, when=(long_2) , comment = 'long_2')
+
+if (strategy.position_size > 0)
+    strategy.close(id="Entry", when=(sell) , comment = 'sell')
+   // strategy.close(id="Entry", when=(roi_sell) , comment = 'roi_sell')
+    // if enableRoi
+    strategy.exit(id="Entry", limit=rioProfit, stop  =sell_stoploss, comment = 'rs_sell')
+    // if enableST
+    //     strategy.exit(id="Entry", stop  =sell_stoploss, comment = 'stoploss_sell')
