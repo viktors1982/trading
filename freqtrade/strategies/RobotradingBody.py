@@ -15,10 +15,10 @@ import talib.abstract as ta
 import freqtrade.vendor.qtpylib.indicators as qtpylib
 
 
-    """
-     https://www.tradingview.com/script/zUaR3Vbb-robotrading-body/  
-     translated for freqtrade: viksal1982  viktors.s@gmail.com
-    """
+   
+    # https://www.tradingview.com/script/zUaR3Vbb-robotrading-body/  
+    # translated for freqtrade: viksal1982  viktors.s@gmail.com
+    #  A timeframe of 4 hours to 1 day
 
 
 
@@ -37,16 +37,10 @@ class RobotradingBody(IStrategy):
     for_mult = IntParameter(1, 20, default=3, space='buy', optimize=True)
     for_sma_length = IntParameter(20, 200, default=100, space='buy', optimize=True)
 
-    # Trailing stoploss
     trailing_stop = False
-    # trailing_only_offset_is_reached = False
-    # trailing_stop_positive = 0.01
-    # trailing_stop_positive_offset = 0.0  # Disabled / not configured
 
-    # Optimal timeframe for the strategy.
-    timeframe = '5m'
+    timeframe = '4h'
 
-    # Run "populate_indicators()" only for new candle.
     process_only_new_candles = False
 
     # These values can be overridden in the "ask_strategy" section in the config.
@@ -71,23 +65,7 @@ class RobotradingBody(IStrategy):
         'sell': 'gtc'
     }
     
-    plot_config = {
-        # Main plot indicators (Moving averages, ...)
-        'main_plot': {
-            'tema': {},
-            'sar': {'color': 'white'},
-        },
-        'subplots': {
-            # Subplots - each dict defines one additional plot
-            "MACD": {
-                'macd': {'color': 'blue'},
-                'macdsignal': {'color': 'orange'},
-            },
-            "RSI": {
-                'rsi': {'color': 'red'},
-            }
-        }
-    }
+
     def informative_pairs(self):
        
         return []
