@@ -49,7 +49,7 @@ class RobotradingBody(IStrategy):
     ignore_roi_if_buy_signal = False
 
     # Number of candles the strategy requires before producing valid signals
-    startup_candle_count: int = 30
+    startup_candle_count: int = 100
 
     # Optional order type mapping.
     order_types = {
