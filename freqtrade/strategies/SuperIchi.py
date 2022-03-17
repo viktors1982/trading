@@ -136,18 +136,18 @@ class SuperIchi(IStrategy):
 
     # Buy hyperspace params:
     buy_params = {
-        "kijun_len_buy": 26,
-        "kijun_mult_buy": 93,
-        "tenkan_len_buy": 73,
-        "tenkan_mult_buy": 74,
+        "kijun_len_buy": 7,
+        "kijun_mult_buy": 3,
+        "tenkan_len_buy": 22,
+        "tenkan_mult_buy": 1,
     }
 
     # Sell hyperspace params:
     sell_params = {
-        "kijun_len_sell": 68,
-        "kijun_mult_sell": 36,
-        "tenkan_len_sell": 15,
-        "tenkan_mult_sell": 97,
+        "kijun_len_sell": 23,
+        "kijun_mult_sell": 5,
+        "tenkan_len_sell": 10,
+        "tenkan_mult_sell": 3,
     }
 
     tenkan_len_buy = IntParameter(1, 30, default=buy_params['tenkan_len_buy'], space='buy', optimize=True)
