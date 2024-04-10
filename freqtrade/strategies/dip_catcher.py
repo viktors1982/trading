@@ -104,7 +104,7 @@ class dip_catcher(IStrategy):
         dataframe['base_line'] = (donchian_channel(dataframe['high'], base_periods) + donchian_channel(dataframe['low'], base_periods)) / 2
         dataframe['lead_line1'] = ((dataframe['conversion_line'] + dataframe['base_line']) / 2).shift(displacement)
         dataframe['lead_line2'] = ((donchian_channel(dataframe['high'], lagging_span2_periods) + donchian_channel(dataframe['low'], lagging_span2_periods)) / 2).shift(displacement)
-        dataframe['lagging_span'] = dataframe['close'].shift(-displacement)
+        dataframe['lagging_span'] = dataframe['close'].shift(displacement)
         return dataframe[['conversion_line', 'base_line', 'lead_line1', 'lead_line2', 'lagging_span']]
 
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
@@ -133,14 +133,14 @@ class dip_catcher(IStrategy):
         dataframe['bb_middleband'] = bollinger['mid']
         dataframe['bb_upperband'] = bollinger['upper']
  
-        dataframe[['conversion_line', 'base_line', 'lead_line1', 'lead_line2', 'senkouspanb']] = self.ichimoku_cloud(dataframe, conversion_periods= (9 * int(self.trend_cloud_multiplier.value)), base_periods=(26 * int(self.trend_cloud_multiplier.value)) , lagging_span2_periods=(52* int(self.trend_cloud_multiplier.value)), displacement=(10* int(self.trend_cloud_multiplier.value)))
+        dataframe[['conversion_line', 'base_line', 'spanA', 'spanB', 'lagging_span']] = self.ichimoku_cloud(dataframe, conversion_periods= (9 * int(self.trend_cloud_multiplier.value)), base_periods=(26 * int(self.trend_cloud_multiplier.value)) , lagging_span2_periods=(52* int(self.trend_cloud_multiplier.value)), displacement=(10* int(self.trend_cloud_multiplier.value)))
 
 
         dataframe.loc[
             (
                 # Condition for a long entry
                 (dataframe['hma_low'] > dataframe['bb_lowerband']) &
-                (dataframe['hma'] > dataframe['senkouspanb'])   
+                (dataframe['hma'] > dataframe['spanB'])   
             ),
             'enter_long'] = 1
 
@@ -148,7 +148,7 @@ class dip_catcher(IStrategy):
             (
                 # Condition for a short entry
                 (dataframe['hma_high'] < dataframe['bb_upperband']) &
-                (dataframe['hma'] < dataframe['senkouspanb'])   
+                (dataframe['hma'] < dataframe['spanB'])   
             ),
             'enter_short'] = 1
 
